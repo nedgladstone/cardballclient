@@ -26,4 +26,14 @@ public class Participant {
 
     //RESTORE?@JsonIdentityReference(alwaysAsId = true)
     private Player player;
+
+    public int compareBattingSlotTo(Participant other) {
+        return battingOrderSlot - other.battingOrderSlot;
+    }
+
+    public int compareFieldingPositionTo(Participant other) {
+        return fieldingPosition - other.fieldingPosition;
+    }
+
+
 }

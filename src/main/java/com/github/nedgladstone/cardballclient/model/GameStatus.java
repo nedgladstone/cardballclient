@@ -19,6 +19,8 @@ public class GameStatus {
 
     private int half = 0;
 
+    private int out = 0;
+
     private SideStatus visitorStatus = new SideStatus();
 
     private SideStatus homeStatus = new SideStatus();

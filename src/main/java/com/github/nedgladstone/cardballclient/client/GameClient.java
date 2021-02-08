@@ -6,9 +6,6 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Put;
 import io.micronaut.http.client.annotation.Client;
 
-import java.sql.Timestamp;
-import java.util.stream.Collectors;
-
 @Client("http://localhost:8082/game")
 public interface GameClient {
     @Get

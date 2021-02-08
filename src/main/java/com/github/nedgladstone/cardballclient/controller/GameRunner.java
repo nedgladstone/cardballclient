@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -58,6 +59,14 @@ public class GameRunner {
         }
         public ParticipantDefinition toParticipantDef() {
             return new ParticipantDefinition(battingOrderSlot, fieldingPosition, player.getId());
+        }
+
+        public int compareBattingSlotTo(Ballplayer other) {
+            return battingOrderSlot - other.battingOrderSlot;
+        }
+
+        public int compareFieldingPositionTo(Ballplayer other) {
+            return fieldingPosition - other.fieldingPosition;
         }
     }
 
@@ -107,19 +116,98 @@ public class GameRunner {
         }
     }
 
+    @Get("/game")
+    public String createGame(@QueryValue Optional<String> name) {
+        String gameName = (name.isPresent()) ? name.get() : "All-Time All-Stars Game at "+ new Timestamp(System.currentTimeMillis()).toString();
+        StringBuilder out = new StringBuilder();
+        logger.info("Creating a game");
+        GameDefinition gameDef = new GameDefinition(gameName, alTeam.getId(), nlTeam.getId());
+        logger.info("- Sending the game creation and receiving game object back");
+        Game createdGame = gameClient.create(gameDef);
+        logger.info("- Received the game object");
+        out.append("\nCreated a Game:\n");
+        out.append(describeGameStatus(createdGame));
+
+        ObjectMapper mapper = new ObjectMapper();
+        String result = mapper.writeValueAsString(createdGame);
+        Game g2 = mapper.readValue(result, Game.class);
+        out.append("LOCAL Ser:\n" + result + "\nDeser:\n" + g2);
+
+        logger.info("Retrieving game by id");
+        out.append("\nRetrieving game by id\n");
+        Game foundGame = gameClient.find(createdGame.getId());
+        out.append(foundGame.toString());
+
+
+
+        /*
+        logger.info("Listing games AS STRING TO DEBUG!!!");
+        out.append("\nListing Games AS STRING TO DEBUG!!!\n");
+        String fetchedGames = gameClient.list();
+        out.append(fetchedGames);
+        //StreamSupport.stream(fetchedGames.spliterator(), false).forEach(g -> out.append(g.toString() + "\n"));
+        */
+
+        logger.info("Outputting lineup definitions");
+        out.append("\nMake sure Lineup Definitions got built properly before using them\n");
+        List<LineupDefinition> lineupDefs = IntStream.iterate(0, i -> i + 1)
+                .limit(2)
+                .mapToObj(i -> new LineupDefinition(IntStream.iterate(i * 9, j -> j + 1)
+                        .limit(9)
+                        .mapToObj(j -> new ParticipantDefinition(j % 9, 9 - j % 9, createdPlayers.get(j).getId()))
+                        .collect(Collectors.toList())))
+                .collect(Collectors.toList());
+        lineupDefs.stream().forEach(ld -> out.append(ld.toString()));
+
+        logger.info("Adding visitor lineup to game");
+        out.append("\nAdding visitor lineup\n");
+        GameStatus statusAfterAddingVisitorLineup = gameClient.putLineup(createdGame.getId(), "visitor", lineupDefs.get(0));
+        out.append(statusAfterAddingVisitorLineup);
+
+        logger.info("Adding home lineup to game");
+        out.append("\nAdding home lineup\n");
+        GameStatus statusAfterAddingHomeLineup = gameClient.putLineup(createdGame.getId(), "home", lineupDefs.get(0));
+        out.append(statusAfterAddingHomeLineup);
+
+        logger.info("Retrieving game by id");
+        out.append("\nRetrieving game by id\n");
+        Game foundGame2 = gameClient.find(createdGame.getId());
+        out.append(foundGame2.toString());
+
+    } catch (Exception e) {
+        out.append("Serdeser exception " + e);
+    }
+
+    private String describeGameStatus(GameStatus gameStatus) {
+        StringBuilder out = new StringBuilder();
+        out     .append("Inning:  ").append(gameStatus.getInning())
+                .append("Batting: ").append(getBattingTeamName(gameStatus))
+                .append("Out:     ").append(gameStatus.getState().)
+    }
+
+    private String getBattingTeamName(GameStatus gameStatus) {
+        return (gameStatus.getHalf() == 0) ? "Visitors" : "Home";
+    }
+
+
     private List<Player> createPlayers(String teamName, List<Ballplayer> ballplayers, StringBuilder out) {
         List<Player> players = ballplayers.stream()
                 .map(pd -> pd.player = playerClient.create(pd.toPlayerDef()))
                 .collect(Collectors.toList());
         out.append("Created ").append(teamName).append(" players:\n").append(
                 players.stream()
-                        .map(p -> " " +
-                                p.getId().toString() + " " +
-                                p.getFirstName() + " " +
-                                p.getLastName() + " " +
-                                p.getYear())
+                        .map(this::describePlayer)
                         .collect(Collectors.joining("\n"))).append("\n");
         return players;
+    }
+
+    private String describePlayer(Player player) {
+        return " " +
+                player.getId().toString() + " " +
+                player.getFirstName() + " " +
+                player.getLastName() + " " +
+                player.getYear();
+
     }
 
     private LineupDefinition createLineup(String teamName, List<Ballplayer> ballplayers, StringBuilder out) {
@@ -128,7 +216,7 @@ public class GameRunner {
                 .collect(Collectors.toList()));
         out.append("Created ").append(teamName).append(" lineup:\n").append(
                 ballplayers.stream()
-                        .sorted()
+                        .sorted(Ballplayer::compareBattingSlotTo)
                         .map(ps -> " " +
                                 ps.battingOrderSlot + " " +
                                 ps.fieldingPosition + " " +
@@ -326,4 +414,18 @@ public class GameRunner {
         return (s1.isPresent() ? s1.get() : "Hello") + "+" + (s2.isPresent() ? s2.get() : "world") + "!";
     }
 
+    @Get("/player")
+    public String concat(@QueryValue String lastName, @QueryValue String firstName, @QueryValue int year) {
+        PlayerDefinition playerDefinition = new PlayerDefinition(lastName, firstName, -1, year);
+        try {
+            Player player = playerClient.create(playerDefinition);
+            if (player == null) {
+                throw new IllegalStateException("Player is null");
+            }
+            return "Player created successfully\n" + describePlayer(player);
+        } catch (Exception e) {
+            return "Failed with exception " + e;
+        }
+
+    }
 }
