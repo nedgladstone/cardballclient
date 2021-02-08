@@ -3,7 +3,7 @@ package com.github.nedgladstone.cardballclient.model;
 import lombok.*;
 
 
-@NoArgsConstructor @AllArgsConstructor @Getter @Setter @ToString
+@NoArgsConstructor @AllArgsConstructor @Getter @Setter
 public class GameStatus {
     public enum State {
         ACCEPTING_LINEUPS,

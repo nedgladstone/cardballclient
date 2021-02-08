@@ -1,9 +1,12 @@
 package com.github.nedgladstone.cardballclient.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
 
-@NoArgsConstructor @AllArgsConstructor @Getter @Setter @ToString @EqualsAndHashCode
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id", scope = Game.class)
+@NoArgsConstructor @AllArgsConstructor @Getter @Setter @EqualsAndHashCode
 public class Player {
     private Long id;
 
@@ -25,6 +28,6 @@ public class Player {
 
     private int era;
 
-    @JsonBackReference
+    //@JsonBackReference(value = "player-in-team")
     private Team team;
 }

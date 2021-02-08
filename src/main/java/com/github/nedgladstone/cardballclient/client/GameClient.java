@@ -9,10 +9,10 @@ import io.micronaut.http.client.annotation.Client;
 import java.sql.Timestamp;
 import java.util.stream.Collectors;
 
-@Client("http://localhost:8082/player")
+@Client("http://localhost:8082/game")
 public interface GameClient {
     @Get
-    Iterable<Game> list();
+    /*Iterable<Game>*/ String list();
 
     @Get("/{id}")
     Game find(long id);
@@ -31,4 +31,10 @@ public interface GameClient {
 
     @Post("/{gameId}/strategy/{role}")
     GameStatus postStrategy(long gameId, String role, String strategy);
+
+    //@Get("/debug")
+    //GameTEST debug();
+
+    @Get("/debug")
+    String debug();
 }

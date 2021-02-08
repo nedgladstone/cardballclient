@@ -2,7 +2,7 @@ package com.github.nedgladstone.cardballclient.model;
 
 import lombok.*;
 
-@NoArgsConstructor @AllArgsConstructor @Getter @Setter @ToString
+@NoArgsConstructor @AllArgsConstructor @Getter @Setter
 public class ParticipantDefinition {
     // 0-8, with 0 batting first
     private int numberInBattingOrder;

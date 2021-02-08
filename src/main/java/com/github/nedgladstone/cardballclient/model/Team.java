@@ -1,12 +1,13 @@
 package com.github.nedgladstone.cardballclient.model;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.*;
 import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@NoArgsConstructor @AllArgsConstructor @Getter @Setter @ToString
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id", scope = Game.class)
+@NoArgsConstructor @AllArgsConstructor @Getter @Setter
 public class Team {
     private Long id;
 
@@ -16,6 +17,12 @@ public class Team {
 
     private int lossesThisSeason = 0;
 
-    @JsonManagedReference
+    //@JsonManagedReference(value = "player-in-team")
     private List<Player> players = new ArrayList<>();
+
+    // experiment
+    //@JsonBackReference(value = "team-in-game")
+    //@JsonManagedReference(value = "team-in-game")
+    //@JsonIgnoreProperties({"visitingTeam", "homeTeam"})
+    private Game game;
 }

@@ -4,7 +4,7 @@ import lombok.*;
 
 import java.util.List;
 
-@NoArgsConstructor @AllArgsConstructor @Getter @Setter @ToString
+@NoArgsConstructor @AllArgsConstructor @Getter @Setter
 public class LineupsResponse {
     private List<Participant> visitingLineup;
     private List<Participant> homeLineup;

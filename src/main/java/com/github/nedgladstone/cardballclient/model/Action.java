@@ -1,23 +1,26 @@
 package com.github.nedgladstone.cardballclient.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
 
 import java.sql.Timestamp;
 import java.util.List;
 
-@NoArgsConstructor @AllArgsConstructor @Getter @Setter @ToString
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id", scope = Game.class)
+@NoArgsConstructor @AllArgsConstructor @Getter @Setter
 public class Action {
     private Long id;
 
-    @JsonBackReference
+    //@JsonBackReference(value = "results-in-cause")
     private Action cause;
 
-    @JsonManagedReference
+    //@JsonManagedReference(value = "results-in-cause")
     private List<Action> results;
 
-    @JsonBackReference
+    //@JsonBackReference(value = "action-in-game")
     private Game game;
 
     private int inning;
