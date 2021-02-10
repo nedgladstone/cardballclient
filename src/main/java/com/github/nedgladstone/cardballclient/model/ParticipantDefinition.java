@@ -13,11 +13,21 @@ public class ParticipantDefinition {
 
     private long playerId;
 
+
     public int compareBattingSlotTo(ParticipantDefinition other) {
         return battingOrderSlot - other.battingOrderSlot;
     }
 
     public int compareFieldingPositionTo(ParticipantDefinition other) {
         return fieldingPosition - other.fieldingPosition;
+    }
+
+    @Override
+    public String toString() {
+        return "ParticipantDefinition{" +
+                "battingOrderSlot=" + battingOrderSlot +
+                ", fieldingPosition=" + fieldingPosition +
+                ", playerId=" + playerId +
+                '}';
     }
 }

@@ -26,19 +26,21 @@ public class Game {
     private String name;
 
     // experiment
-    //@JsonManagedReference(value = "team-in-game")
+    // @JsonManagedReference(value = "team-in-game")
     //@JsonIgnoreProperties("game")
     private Team visitingTeam = null;
 
     // experiment
-    //@JsonManagedReference(value = "team-in-game")
+    // @JsonManagedReference(value = "team-in-game")
     //@JsonIgnoreProperties("game")
     private Team homeTeam = null;
 
     @JsonManagedReference(value = "participant-in-game")
+    @JsonIgnoreProperties("game")
     private List<Participant> visitingLineup = new ArrayList<>();
 
     @JsonManagedReference(value = "participant-in-game")
+    @JsonIgnoreProperties("game")
     private List<Participant> homeLineup = new ArrayList<>();
 
     private GameStatus status = new GameStatus();
@@ -48,4 +50,8 @@ public class Game {
 
     //@JsonManagedReference(value = "action-in-game")
     private List<Action> actions = new ArrayList<>();
+
+    public String myString() {
+        return "Game: " + id + " " + name + " vtl " + visitingLineup.size() + " htl " + homeLineup.size();
+    }
 }

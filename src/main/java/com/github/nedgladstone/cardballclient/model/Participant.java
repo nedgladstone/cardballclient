@@ -1,9 +1,6 @@
 package com.github.nedgladstone.cardballclient.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIdentityReference;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.annotation.*;
 import lombok.*;
 
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id", scope = Game.class)
@@ -12,6 +9,7 @@ public class Participant {
     private Long id;
 
     @JsonBackReference(value = "participant-in-game")
+    //@JsonIgnore
     private Game game;
 
     // -1 - -9 = batting order slot before being substituted out
@@ -34,6 +32,17 @@ public class Participant {
     public int compareFieldingPositionTo(Participant other) {
         return fieldingPosition - other.fieldingPosition;
     }
+/*
+    @Override
+    public String toString() {
+        return "Participant{" +
+                "id=" + id +
+                ", game=" + game +
+                ", battingOrderSlot=" + battingOrderSlot +
+                ", fieldingPosition=" + fieldingPosition +
+                ", player=" + player +
+                '}';
+    }
 
-
+ */
 }

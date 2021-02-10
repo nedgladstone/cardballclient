@@ -24,7 +24,7 @@ public interface GameClient {
     LineupsResponse listLineups(long gameId);
 
     @Put("/{gameId}/lineup/{side}")
-    GameStatus putLineup(long gameId, String side, LineupDefinition lineupDefinition);
+    Game putLineup(long gameId, String side, LineupDefinition lineupDefinition);
 
     @Post("/{gameId}/strategy/{role}")
     GameStatus postStrategy(long gameId, String role, String strategy);

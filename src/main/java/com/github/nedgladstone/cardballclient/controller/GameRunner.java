@@ -10,7 +10,6 @@ import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,17 +27,37 @@ import java.util.stream.StreamSupport;
 @Controller("/cardball")
 public class GameRunner {
     private static final Logger logger = LoggerFactory.getLogger("com.github.nedgladstone.cardballclient");
+    private static String fieldTemplate =
+            "\\                                                /\n" +
+            "  \\                                            /  \n" +
+            "    \\                                        /    \n" +
+            "      \\                 2                  /      \n" +
+            "        \\                                /        \n" +
+            "          \\                            /          \n" +
+            "            \\                        /            \n" +
+            "              3                   1               \n" +
+            "                \\                /                \n" +
+            "                  \\            /                  \n" +
+            "                    \\        /                    \n" +
+            "                      \\    /                      \n" +
+            "                        0/                        \n";
+
 
     protected final PlayerClient playerClient;
     protected final TeamClient teamClient;
     protected final GameClient gameClient;
 
+    private String alTeamName;
+    private String nlTeamName;
     private List<Player> alPlayers;
     private List<Player> nlPlayers;
     private LineupDefinition alLineup;
     private LineupDefinition nlLineup;
     private Team alTeam;
     private Team nlTeam;
+    private Game game;
+    private long gameId;
+    private GameStatus gameStatus;
 
     public GameRunner(PlayerClient playerClient, TeamClient teamClient, GameClient gameClient) {
         this.playerClient = playerClient;
@@ -73,8 +92,8 @@ public class GameRunner {
     @Get("/teams")
     String createPlayers() {
         StringBuilder out = new StringBuilder();
-        String alName = "AL All-Time All-Stars";
-        String nlName = "NL All-Time All-Stars";
+        alTeamName = "AL All-Time All-Stars";
+        nlTeamName = "NL All-Time All-Stars";
         try {
             logger.info("Creating players");
             List<Ballplayer> alBallplayers = Arrays.asList(
@@ -97,18 +116,18 @@ public class GameRunner {
                     new Ballplayer("Stan", "Musial", 1946, 1, 9),
                     new Ballplayer("Willie", "Mays", 1965, 2, 8),
                     new Ballplayer("Gaylord", "Perry", 1977, 9, 1));
-            alPlayers = createPlayers(alName, alBallplayers, out);
-            nlPlayers = createPlayers(nlName, nlBallplayers, out);
+            alPlayers = createPlayers(alTeamName, alBallplayers, out);
+            nlPlayers = createPlayers(nlTeamName, nlBallplayers, out);
             out.append("\n");
 
             // Create lineups
-            alLineup = createLineup(alName, alBallplayers, out);
-            nlLineup = createLineup(nlName, nlBallplayers, out);
+            alLineup = createLineup(alTeamName, alBallplayers, out);
+            nlLineup = createLineup(nlTeamName, nlBallplayers, out);
             out.append("\n");
 
             // Create teams
-            alTeam = createTeam(alName, "Ned", alLineup, out);
-            nlTeam = createTeam(nlName, "Ed", nlLineup, out);
+            alTeam = createTeam(alTeamName, "Ned", alLineup, out);
+            nlTeam = createTeam(nlTeamName, "Ed", nlLineup, out);
 
             return out.toString();
         } catch (Exception e) {
@@ -122,71 +141,97 @@ public class GameRunner {
         StringBuilder out = new StringBuilder();
         logger.info("Creating a game");
         GameDefinition gameDef = new GameDefinition(gameName, alTeam.getId(), nlTeam.getId());
-        logger.info("- Sending the game creation and receiving game object back");
-        Game createdGame = gameClient.create(gameDef);
-        logger.info("- Received the game object");
+        try {
+            game = gameClient.create(gameDef);
+            gameId = game.getId();
+            gameStatus = game.getStatus();
+            logger.info("- Received the game object");
+
+            logger.info("Adding lineups to game");
+            game = gameClient.putLineup(gameId, "visitor", alLineup);
+            logger.info("Game after putting visitor lineup: " + game.myString());
+
+            game = gameClient.putLineup(gameId, "home", nlLineup);
+            logger.info("Game after putting home lineup: " + game.myString());
+
+            logger.info("Getting created game");
+            game = gameClient.find(gameId);
+            logger.info("Game after re-getting with id: " + gameId + ": " + game.myString());
+            logger.info("Getting game status");
+            gameStatus = game.getStatus();
+        } catch (Exception e) {
+            logger.error("Exception creating game: ", e);
+            out.append("Exception creating game: " + e);
+            return out.toString();
+        }
         out.append("\nCreated a Game:\n");
-        out.append(describeGameStatus(createdGame));
-
-        ObjectMapper mapper = new ObjectMapper();
-        String result = mapper.writeValueAsString(createdGame);
-        Game g2 = mapper.readValue(result, Game.class);
-        out.append("LOCAL Ser:\n" + result + "\nDeser:\n" + g2);
-
-        logger.info("Retrieving game by id");
-        out.append("\nRetrieving game by id\n");
-        Game foundGame = gameClient.find(createdGame.getId());
-        out.append(foundGame.toString());
-
-
-
-        /*
-        logger.info("Listing games AS STRING TO DEBUG!!!");
-        out.append("\nListing Games AS STRING TO DEBUG!!!\n");
-        String fetchedGames = gameClient.list();
-        out.append(fetchedGames);
-        //StreamSupport.stream(fetchedGames.spliterator(), false).forEach(g -> out.append(g.toString() + "\n"));
-        */
-
-        logger.info("Outputting lineup definitions");
-        out.append("\nMake sure Lineup Definitions got built properly before using them\n");
-        List<LineupDefinition> lineupDefs = IntStream.iterate(0, i -> i + 1)
-                .limit(2)
-                .mapToObj(i -> new LineupDefinition(IntStream.iterate(i * 9, j -> j + 1)
-                        .limit(9)
-                        .mapToObj(j -> new ParticipantDefinition(j % 9, 9 - j % 9, createdPlayers.get(j).getId()))
-                        .collect(Collectors.toList())))
-                .collect(Collectors.toList());
-        lineupDefs.stream().forEach(ld -> out.append(ld.toString()));
-
-        logger.info("Adding visitor lineup to game");
-        out.append("\nAdding visitor lineup\n");
-        GameStatus statusAfterAddingVisitorLineup = gameClient.putLineup(createdGame.getId(), "visitor", lineupDefs.get(0));
-        out.append(statusAfterAddingVisitorLineup);
-
-        logger.info("Adding home lineup to game");
-        out.append("\nAdding home lineup\n");
-        GameStatus statusAfterAddingHomeLineup = gameClient.putLineup(createdGame.getId(), "home", lineupDefs.get(0));
-        out.append(statusAfterAddingHomeLineup);
-
-        logger.info("Retrieving game by id");
-        out.append("\nRetrieving game by id\n");
-        Game foundGame2 = gameClient.find(createdGame.getId());
-        out.append(foundGame2.toString());
-
-    } catch (Exception e) {
-        out.append("Serdeser exception " + e);
+        out.append(describeGameStatus());
+        return out.toString();
     }
 
-    private String describeGameStatus(GameStatus gameStatus) {
+    private String describeGameStatus() {
         StringBuilder out = new StringBuilder();
-        out     .append("Inning:  ").append(gameStatus.getInning())
-                .append("Batting: ").append(getBattingTeamName(gameStatus))
-                .append("Out:     ").append(gameStatus.getState().)
+        out     .append("Inning:   ").append(gameStatus.getInning())
+                .append("Batting:  ").append(getBattingTeamName())
+                .append("Out:      ").append(gameStatus.getOuts())
+                .append("Pitching: ").append(fullName(getCurrentPitcher()))
+                .append("At Bat:   ").append(fullName(getCurrentBatter()))
+                .append("\n").append(getField());
+        return out.toString();
     }
 
-    private String getBattingTeamName(GameStatus gameStatus) {
-        return (gameStatus.getHalf() == 0) ? "Visitors" : "Home";
+    // TODO NG20210208 Refactor some of this into problem domain classes?
+
+    // TODO NG20210208 Get rid of the Game/GameStatus split
+
+    private String fullName(Participant participant) {
+        return participant.getPlayer().getFirstName() + " " +
+                participant.getPlayer().getLastName();
+    }
+
+    private Participant getCurrentPitcher() {
+        return getParticipantByFieldingPosition(1);
+    }
+
+    private Participant getCurrentBatter() {
+        return getParticipantByBattingSlot(gameStatus.getBatter());
+    }
+
+    private Participant getParticipantByBattingSlot(int battingSlot) {
+        return findByBattingOrder(
+                ((gameStatus.getHalf() == 0) ? game.getVisitingLineup() : game.getHomeLineup()), battingSlot);
+    }
+
+    private Participant getParticipantByFieldingPosition(int fieldingPosition) {
+        logger.info("find by fielding position " + fieldingPosition + " half " + gameStatus.getHalf());
+        logger.info("home lineup " + game.getHomeLineup());
+        logger.info("visitor lineup " + game.getVisitingLineup());
+        return findByFieldingPosition(
+                ((gameStatus.getHalf() == 0) ? game.getHomeLineup() : game.getVisitingLineup()), fieldingPosition);
+    }
+
+    private Participant findByBattingOrder(List<Participant> lineup, int battingOrderSlot) {
+        return lineup.stream().filter(p -> p.getBattingOrderSlot() == battingOrderSlot).findFirst().get();
+    }
+
+    private Participant findByFieldingPosition(List<Participant> lineup, int fieldingPosition) {
+        return lineup.stream().filter(p -> p.getFieldingPosition() == fieldingPosition).findFirst().get();
+    }
+
+    private String getField() {
+        return replacePlayer(replacePlayer(replacePlayer(replacePlayer(fieldTemplate,
+                0, gameStatus.getBatter()),
+                1, gameStatus.getOnFirst()),
+                2, gameStatus.getOnSecond()),
+                3, gameStatus.getOnThird());
+    }
+
+    private String replacePlayer(String template, int base, int player) {
+        return template.replace(Integer.toString(base), (player > 0) ? Integer.toString(player) : "+");
+    }
+
+    private String getBattingTeamName() {
+        return (gameStatus.getHalf() == 0) ? alTeamName : nlTeamName;
     }
 
 
@@ -214,6 +259,7 @@ public class GameRunner {
         LineupDefinition lineup = new LineupDefinition(ballplayers.stream()
                 .map(Ballplayer::toParticipantDef)
                 .collect(Collectors.toList()));
+        logger.info("Creating lineup for " + teamName + ": " + lineup.getParticipants());
         out.append("Created ").append(teamName).append(" lineup:\n").append(
                 ballplayers.stream()
                         .sorted(Ballplayer::compareBattingSlotTo)
@@ -328,12 +374,12 @@ public class GameRunner {
 
         logger.info("Adding visitor lineup to game");
         out.append("\nAdding visitor lineup\n");
-        GameStatus statusAfterAddingVisitorLineup = gameClient.putLineup(createdGame.getId(), "visitor", lineupDefs.get(0));
+        Game statusAfterAddingVisitorLineup = gameClient.putLineup(createdGame.getId(), "visitor", lineupDefs.get(0));
         out.append(statusAfterAddingVisitorLineup);
 
         logger.info("Adding home lineup to game");
         out.append("\nAdding home lineup\n");
-        GameStatus statusAfterAddingHomeLineup = gameClient.putLineup(createdGame.getId(), "home", lineupDefs.get(0));
+        Game statusAfterAddingHomeLineup = gameClient.putLineup(createdGame.getId(), "home", lineupDefs.get(0));
         out.append(statusAfterAddingHomeLineup);
 
         logger.info("Retrieving game by id");

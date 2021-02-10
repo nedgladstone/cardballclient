@@ -19,9 +19,25 @@ public class GameStatus {
 
     private int half = 0;
 
-    private int out = 0;
+    private int runs = 0;
 
-    private SideStatus visitorStatus = new SideStatus();
+    private int hits = 0;
 
-    private SideStatus homeStatus = new SideStatus();
+    private int errors = 0;
+
+    private int outs = 0;
+
+    private int balls = 0;
+
+    private int strikes = 0;
+
+    // The following fields are set to the slot number in the batting order
+    // Or 0 if unoccupied
+    private int batter = 0;
+
+    private int onFirst = 0;
+
+    private int onSecond = 0;
+
+    private int onThird = 0;
 }
